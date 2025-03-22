@@ -157,7 +157,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       });
       
       if (existingUser) {
-        return res.status(400).json({ message: 'Username is already taken' });
+        return res.status(409).json({ message: 'Username is already taken' });
       }
       
       user.username = req.body.username;
