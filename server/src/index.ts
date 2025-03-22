@@ -13,6 +13,7 @@ import './config/passport';
 import fs from 'fs';
 import https from 'https';
 import http from 'http';
+import swaggerSpec from './config/swagger';
 
 // Load environment variables
 dotenv.config();
@@ -83,6 +84,10 @@ app.get('/', (req: Request, res: Response) => {
 // Use API routes
 app.use('/api', apiRoutes);
 
+// Add Swagger documentation route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+console.log('[Server] Swagger documentation route set up at /api-docs');
+
 // Connect to MongoDB
 const connectDB = async () => {
   try {
@@ -94,14 +99,6 @@ const connectDB = async () => {
     process.exit(1);
   }
 };
-
-// API Documentation
-try {
-  const swaggerDocument = YAML.load(path.join(__dirname, '../swagger.yaml'));
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-} catch (error) {
-  console.error('Swagger documentation error:', error);
-}
 
 // SSL options
 const sslOptions = {

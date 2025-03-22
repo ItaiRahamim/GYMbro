@@ -87,43 +87,6 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-// Swagger Documentation
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-// הוספת לוג לבדיקת נתיב התיקייה 
-console.log('נתיב קבצים סטטיים:', path.join(__dirname, '../uploads'));
-console.log('נתיב מוחלט:', path.resolve(path.join(__dirname, '../uploads')));
-
-// הוספת מידלוואר CORS ייעודי לתמונות
-app.use('/uploads', (req, res, next) => {
-  // כותרות CORS אשר יתירו גישה מכל דומיין
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  // כותרות קריטיות לפתרון בעיות אבטחה וקרוס-אוריג'ין
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  res.header('Cross-Origin-Embedder-Policy', 'credentialless');
-  next();
-});
-
-// תוספת חדשה - מאפשר גישה ישירה לתמונות במסלול נוסף עם CORS
-app.use('/api/uploads', (req, res, next) => {
-  // הגדרות להתמודדות עם CORS עבור תמונות
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET');
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
-  next();
-}, express.static(path.join(__dirname, '../uploads')));
-
-console.log('Added direct image path with CORS headers:', path.join(__dirname, '../uploads'));
-
-// אין צורך בהגדרה נוספת של '/uploads/posts' כי היא כבר נכללת ב-'/uploads'
-// לכן ניתן להסיר את השורה הבאה והלוג שלה
-// app.use('/uploads/posts', express.static(path.join(__dirname, '../uploads/posts')));
-// console.log('Posts images path:', path.join(__dirname, '../uploads/posts'));
-
 // יצירת מעטפת אסינכרונית כדוגמת שאר הראוטרים בפרויקט
 const asyncWrapper = (fn: (req: Request, res: Response) => Promise<any> | any) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -339,23 +302,39 @@ app.get('/api/debug/list-images', async function(req: Request, res: Response): P
   }
 });
 
-// Static files - הגדרה אחת מאוחדת במקום שתיים
+// Static files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// הוספת לוג לבדיקת נתיב התיקייה 
+console.log('נתיב קבצים סטטיים:', path.join(__dirname, '../uploads'));
+console.log('נתיב מוחלט:', path.resolve(path.join(__dirname, '../uploads')));
+
+// הוספת מידלוואר CORS ייעודי לתמונות
 app.use('/uploads', (req, res, next) => {
-  // Debug request
-  console.log(`[StaticFiles] Request for: ${req.url}`, {
-    fullPath: path.join(__dirname, '../uploads', req.url),
-    exists: fs.existsSync(path.join(__dirname, '../uploads', req.url))
-  });
-  
-  // Set headers for CORS and caching
-  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  // כותרות CORS אשר יתירו גישה מכל דומיין
   res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  // כותרות קריטיות לפתרון בעיות אבטחה וקרוס-אוריג'ין
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'credentialless');
   next();
-}, express.static(path.join(__dirname, '../uploads'), {
-  maxAge: '1d',
-  etag: true,
-  lastModified: true
-}));
+});
+
+// תוספת חדשה - מאפשר גישה ישירה לתמונות במסלול נוסף עם CORS
+app.use('/api/uploads', (req, res, next) => {
+  // הגדרות להתמודדות עם CORS עבור תמונות
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  next();
+}, express.static(path.join(__dirname, '../uploads')));
+
+console.log('Added direct image path with CORS headers:', path.join(__dirname, '../uploads'));
+
+// אין צורך בהגדרה נוספת של '/uploads/posts' כי היא כבר נכללת ב-'/uploads'
+// לכן ניתן להסיר את השורה הבאה והלוג שלה
+// app.use('/uploads/posts', express.static(path.join(__dirname, '../uploads/posts')));
+// console.log('Posts images path:', path.join(__dirname, '../uploads/posts'));
 
 // Log upload dirs and permissions
 const printUploadsPermissions = () => {
@@ -492,6 +471,9 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/search', searchRoutes);
+
+// Swagger Documentation - updating path to match the one being used in the browser
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
 
 // Error handling
 app.use(errorHandler);
