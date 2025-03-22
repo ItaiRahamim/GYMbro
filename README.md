@@ -56,6 +56,7 @@
 - MongoDB
 - חשבון Google Developer (ל-OAuth)
 - מפתח API של OpenAI או Gemini
+- מפתחות SSL (לשימוש ב-HTTPS)
 
 ### התקנה
 1. שכפל את המאגר:
@@ -74,27 +75,38 @@ cp .env.example .env
 3. עדכן את קובץ ה-.env עם המידע המתאים:
 ```
 PORT=5000
+HTTPS_PORT=5443
 MONGODB_URI=mongodb://localhost:27017/gymbro
 JWT_SECRET=your_jwt_secret_key
 JWT_REFRESH_SECRET=your_jwt_refresh_secret_key
-_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
-CLIENT_URL=http://localhost:3000
+CLIENT_URL=https://localhost:3000
 NODE_ENV=development
 OPENAI_API_KEY=your_openai_api_key
 GEMINI_API_KEY=your_gemini_api_key
+AI_PROVIDER=gemini
 ```
 
-4. התקן תלויות בצד הלקוח:
+4. צור תיקיית SSL ויצר מפתחות עצמיים (רק לפיתוח):
+```
+mkdir -p server/ssl
+openssl req -nodes -new -x509 -keyout server/ssl/server.key -out server/ssl/server.cert -subj "/CN=localhost" -days 365
+```
+
+5. התקן תלויות בצד הלקוח:
 ```
 cd ../client
 npm install
 cp .env.example .env
 ```
 
-5. עדכן את קובץ ה-.env במידת הצורך:
+6. עדכן את קובץ ה-.env במידת הצורך:
 ```
-REACT_APP_API_URL=http://localhost:5000/api
+REACT_APP_API_URL=https://localhost:5443/api
+HTTPS=true
+SSL_CRT_FILE=../server/ssl/server.cert
+SSL_KEY_FILE=../server/ssl/server.key
 ```
 
 ### הרצה בסביבת פיתוח
@@ -111,7 +123,9 @@ cd client
 npm start
 ```
 
-3. גש לכתובת http://localhost:3000 בדפדפן שלך.
+3. גש לכתובת https://localhost:3000 בדפדפן שלך.
+
+**הערה**: בגלל השימוש בתעודות SSL עצמיות (self-signed), הדפדפן יציג אזהרת אבטחה. לחץ על "Advanced" ו-"Proceed" כדי להמשיך לאתר. אזהרה זו מופיעה רק בסביבת פיתוח.
 
 ### הרצה בסביבת ייצור
 
@@ -244,3 +258,41 @@ Each test set includes both positive tests (happy path) and negative tests (vali
 - בסביבת ייצור, הוסף היגיון נוסף לוודא תקפות הטוקן מ-Google
 - שקול להוסיף אימות נוסף לתהליך הרישום/התחברות
 - תמיד בדוק את אישורי הלקוח בצד השרת לפני יצירת משתמש חדש או התחברות 
+
+## הגדרת HTTPS
+
+הפרויקט מוגדר לעבוד עם HTTPS כדי להבטיח אבטחת תקשורת בין הלקוח לשרת. להלן מידע נוסף על ההגדרה:
+
+### יצירת מפתחות SSL
+
+בסביבת פיתוח, אנחנו משתמשים במפתחות SSL עצמיים (self-signed):
+
+```bash
+mkdir -p server/ssl
+openssl req -nodes -new -x509 -keyout server/ssl/server.key -out server/ssl/server.cert -subj "/CN=localhost" -days 365
+```
+
+### הגדרת השרת (Backend)
+
+השרת מקבל בקשות הן בפרוטוקול HTTP (פורט 5000) והן בפרוטוקול HTTPS (פורט 5443). בסביבת ייצור, מומלץ להשתמש רק ב-HTTPS ולהגדיר הפניה אוטומטית מ-HTTP ל-HTTPS.
+
+### הגדרת הלקוח (Frontend)
+
+הלקוח מוגדר לפנות לשרת באמצעות HTTPS, ויש להפעיל אותו גם כן עם HTTPS. הדפדפנים המודרניים דורשים HTTPS עבור תכונות מתקדמות כמו Web Camera, Geolocation, ועוד.
+
+### סביבת ייצור
+
+בסביבת ייצור, יש להשתמש בתעודות SSL אמיתיות מרשות אישורים מוכרת (CA). אפשר להשיג תעודות בחינם מ-Let's Encrypt.
+
+```bash
+# דוגמה להגדרת Let's Encrypt עם Certbot (יש להתקין Certbot תחילה)
+certbot certonly --standalone -d yourdomain.com -d www.yourdomain.com
+```
+
+לאחר קבלת התעודות, יש לעדכן את נתיבי הקבצים בקוד או ב-.env:
+
+```
+# בקובץ .env של השרת
+SSL_CERT_PATH=/etc/letsencrypt/live/yourdomain.com/fullchain.pem
+SSL_KEY_PATH=/etc/letsencrypt/live/yourdomain.com/privkey.pem
+``` 
