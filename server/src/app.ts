@@ -15,6 +15,7 @@ import searchRoutes from './routes/searchRoutes';
 import { errorHandler } from './middleware/errorMiddleware';
 import fs from 'fs';
 import { fixEmptyImageFiles } from './middleware/upload';
+import chatRoutes from './routes/chatRoutes';
 
 const app = express();
 
@@ -233,6 +234,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/likes', likeRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/chats', chatRoutes);
 
 // אנדפוינט לתיקון תמונות ריקות
 app.post('/api/fix-empty-images', asyncWrapper(async (req: Request, res: Response) => {

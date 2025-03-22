@@ -14,6 +14,7 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 import swaggerSpec from './config/swagger';
+import { initializeSocketIO } from './services/socketService';
 
 // Load environment variables
 dotenv.config();
@@ -110,6 +111,10 @@ const sslOptions = {
 connectDB().then(() => {
   // Create HTTPS server
   const httpsServer = https.createServer(sslOptions, app);
+  
+  // Initialize Socket.IO with HTTPS server
+  const httpsIo = initializeSocketIO(httpsServer);
+  
   httpsServer.listen(httpsPort, () => {
     console.log(`HTTPS Server running on port ${httpsPort}`);
   });
@@ -117,6 +122,10 @@ connectDB().then(() => {
   // Also start HTTP server for development (optional)
   // In production, you would typically redirect HTTP to HTTPS
   const httpServer = http.createServer(app);
+  
+  // Initialize Socket.IO with HTTP server
+  const httpIo = initializeSocketIO(httpServer);
+  
   httpServer.listen(port, () => {
     console.log(`HTTP Server running on port ${port} (for development only)`);
   });
