@@ -1,15 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import * as FaIcons from 'react-icons/fa';
 import AnonymousAvatar from './AnonymousAvatar';
 import '../styles/Navbar.css';
+import { chatService } from '../services/chatService';
 
 const Navbar: React.FC = () => {
   const { authState, logout } = useAuth();
   const { isAuthenticated, user } = authState;
+  const { socket } = useSocket();
   const navigate = useNavigate();
   const [imageError, setImageError] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread message count on load and when receiving new messages
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Initial fetch
+      fetchUnreadCount();
+
+      // Listen for new messages
+      if (socket) {
+        socket.on('new message', () => {
+          fetchUnreadCount();
+        });
+
+        socket.on('messages read', () => {
+          fetchUnreadCount();
+        });
+
+        return () => {
+          socket.off('new message');
+          socket.off('messages read');
+        };
+      }
+    }
+  }, [isAuthenticated, socket]);
+
+  const fetchUnreadCount = async () => {
+    try {
+      const response = await chatService.getUnreadMessageCount();
+      setUnreadCount(response);
+    } catch (error) {
+      console.error('Error fetching unread count:', error);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -56,6 +93,18 @@ const Navbar: React.FC = () => {
                 className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
               >
                 מחשבון תזונה
+              </NavLink>
+              <NavLink 
+                to="/chat" 
+                className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+              >
+                <span style={{ position: 'relative' }}>
+                  {FaIcons.FaComments({})}
+                  {unreadCount > 0 && (
+                    <span className="unread-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+                  )}
+                </span>
+                {' '}צ'אט
               </NavLink>
               <NavLink 
                 to={user?.id ? `/profile/${user.id}` : '/profile'} 

@@ -245,5 +245,6 @@ build/
 .env.production.local
 server/.env
 server/.env.example
+server/.env_prod
 client/.env
 client/.env.example

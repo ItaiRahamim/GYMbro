@@ -374,9 +374,18 @@ const Profile: React.FC = () => {
                 </div>
               </div>
               
-              {isOwnProfile && (
+              {isOwnProfile ? (
                 <Link to="/edit-profile" className="btn btn-outline-primary">
                   <span className="me-2">{FaIcons.FaEdit({})}</span> ערוך פרופיל
+                </Link>
+              ) : (
+                // כפתור לשליחת הודעה למשתמש כאשר זה לא הפרופיל של המשתמש המחובר
+                <Link 
+                  to={`/chat`} 
+                  state={{ userId: user.id || user._id }}
+                  className="btn btn-outline-primary"
+                >
+                  <span className="me-2">{FaIcons.FaComment({})}</span> שלח הודעה
                 </Link>
               )}
             </div>

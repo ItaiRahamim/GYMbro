@@ -440,7 +440,21 @@ export const googleCallback = async (req: Request, res: Response): Promise<void>
     // Override type since req.user is added by passport
     const reqWithUser = req as Request & { user?: any };
     
+    console.log("Google OAuth callback received:", {
+      hasUser: !!reqWithUser.user,
+      userId: reqWithUser.user?._id,
+      query: req.query,
+      headers: {
+        host: req.headers.host,
+        origin: req.headers.origin,
+        referer: req.headers.referer
+      },
+      originalUrl: req.originalUrl,
+      path: req.path
+    });
+    
     if (!reqWithUser.user || !reqWithUser.user._id) {
+      console.error("Authentication failed - no user in request");
       res.status(401).json({ message: 'Authentication failed' });
       return;
     }
@@ -450,6 +464,7 @@ export const googleCallback = async (req: Request, res: Response): Promise<void>
     const user = await User.findById(userId);
 
     if (!user) {
+      console.error(`User not found with ID: ${userId}`);
       res.status(404).json({ message: 'User not found' });
       return;
     }
@@ -458,20 +473,16 @@ export const googleCallback = async (req: Request, res: Response): Promise<void>
     const accessToken = createToken(userId as string | mongoose.Types.ObjectId);
     const refreshToken = createRefreshToken(userId as string | mongoose.Types.ObjectId);
 
-    res.json({
-      message: 'Google authentication successful',
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        profilePicture: user.profilePicture
-      },
-      accessToken,
-      refreshToken
-    });
+    // הפניה לדף הקליינט עם הטוקנים
+    const CLIENT_URL = process.env.CLIENT_URL || 'https://localhost:3000';
+    const redirectUrl = `${CLIENT_URL}/auth-callback?token=${accessToken}&refreshToken=${refreshToken}`;
+    
+    console.log(`Redirecting to: ${redirectUrl}`);
+    res.redirect(redirectUrl);
   } catch (error) {
     console.error('Google callback error:', error);
-    res.status(500).json({ message: 'Server error' });
+    // הפניה לדף שגיאה בקליינט
+    res.redirect(`${process.env.CLIENT_URL || 'https://localhost:3000'}/login?error=auth_failed`);
   }
 };
 

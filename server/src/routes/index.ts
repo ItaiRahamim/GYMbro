@@ -6,6 +6,8 @@ import commentRoutes from './commentRoutes';
 import likeRoutes from './likeRoutes';
 import aiRoutes from './aiRoutes';
 import searchRoutes from './searchRoutes';
+import chatRoutes from './chatRoutes';
+import messageRoutes from './messageRoutes';
 
 const router = express.Router();
 
@@ -17,5 +19,7 @@ router.use('/comments', commentRoutes);
 router.use('/likes', likeRoutes);
 router.use('/ai', aiRoutes);
 router.use('/search', searchRoutes);
+router.use('/chats', chatRoutes);
+router.use('/messages', messageRoutes);
 
 export default router; 

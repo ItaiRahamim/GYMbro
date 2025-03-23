@@ -39,8 +39,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
   };
 
   const handleGoogleLogin = async (response: any) => {
+    console.log('Google login response received:', {
+      hasCredential: !!response?.credential, 
+      credentialLength: response?.credential ? response.credential.length : 0,
+      responseKeys: Object.keys(response || {})
+    });
+    
     if (response?.credential) {
       await onGoogleLogin(response.credential);
+    } else {
+      console.error('Missing credential in Google response', response);
     }
   };
 
@@ -141,6 +149,9 @@ const LoginForm: React.FC<LoginFormProps> = ({
                 size="large"
                 width="280"
                 useOneTap={false}
+                type="standard"
+                theme="filled_blue"
+                context="signin"
               />
             ) : (
               <div className="google-button-disabled">

@@ -16,7 +16,7 @@ export const setNavigate = (navigateFunction: any) => {
 };
 
 // בתחילת הקובץ, לפני יצירת אובייקט ה-API, אני רוצה לוודא שיש הגדרה נכונה של הבסיס URL
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:5443/api';
 
 // יצירת instance חדש של axios עם קונפיגורציה בסיסית
 const api = axios.create({

@@ -11,6 +11,10 @@ import apiRoutes from './routes';
 import passport from 'passport';
 import './config/passport';
 import fs from 'fs';
+import https from 'https';
+import http from 'http';
+import swaggerSpec from './config/swagger';
+import { initializeSocketIO } from './services/socketService';
 
 // Load environment variables
 dotenv.config();
@@ -18,15 +22,20 @@ dotenv.config();
 // Initialize Express app
 const app: Express = express();
 const port = process.env.PORT || 5000;
+const httpsPort = process.env.HTTPS_PORT || 5443;
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: process.env.CLIENT_URL || 'https://localhost:3000',
   credentials: true, // Allow cookies to be sent
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
-app.use(helmet());
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
@@ -80,6 +89,10 @@ app.get('/', (req: Request, res: Response) => {
 // Use API routes
 app.use('/api', apiRoutes);
 
+// Add Swagger documentation route
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, { explorer: true }));
+console.log('[Server] Swagger documentation route set up at /api-docs');
+
 // Connect to MongoDB
 const connectDB = async () => {
   try {
@@ -92,18 +105,33 @@ const connectDB = async () => {
   }
 };
 
-// API Documentation
-try {
-  const swaggerDocument = YAML.load(path.join(__dirname, '../swagger.yaml'));
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-} catch (error) {
-  console.error('Swagger documentation error:', error);
-}
+// SSL options
+const sslOptions = {
+  key: fs.readFileSync(path.join(__dirname, '../ssl/server.key')),
+  cert: fs.readFileSync(path.join(__dirname, '../ssl/server.cert'))
+};
 
 // Start server
 connectDB().then(() => {
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+  // Create HTTPS server
+  const httpsServer = https.createServer(sslOptions, app);
+  
+  // Initialize Socket.IO with HTTPS server
+  const httpsIo = initializeSocketIO(httpsServer);
+  
+  httpsServer.listen(httpsPort, () => {
+    console.log(`HTTPS Server running on port ${httpsPort}`);
+  });
+
+  // Also start HTTP server for development (optional)
+  // In production, you would typically redirect HTTP to HTTPS
+  const httpServer = http.createServer(app);
+  
+  // Initialize Socket.IO with HTTP server
+  const httpIo = initializeSocketIO(httpServer);
+  
+  httpServer.listen(port, () => {
+    console.log(`HTTP Server running on port ${port} (for development only)`);
   });
 });
 
