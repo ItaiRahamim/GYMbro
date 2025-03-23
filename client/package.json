@@ -1,5 +1,5 @@
 {
-  "name": "gymbro2-client",
+  "name": "gymbro-client",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -40,11 +40,12 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
+
   "eslintConfig": {
     "extends": [
       "react-app",
