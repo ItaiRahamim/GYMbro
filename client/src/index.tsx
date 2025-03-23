@@ -14,8 +14,14 @@ const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 // וידוא שה-CLIENT_ID קיים ותקין (מתחיל ב-CLIENT_ID של גוגל, בדרך כלל מתחיל ב-)
 const isValidClientId = !!GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID.length > 20 && !GOOGLE_CLIENT_ID.startsWith('GOCSPX-');
 
-// לוג אבחון
-console.log('GoogleOAuthProvider setup with valid Client ID:', isValidClientId);
+// לוג אבחון מפורט יותר
+console.log('Google OAuth Setup:', {
+  clientIdValue: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 10)}...` : 'empty',
+  clientIdLength: GOOGLE_CLIENT_ID.length,
+  isValidClientId: isValidClientId,
+  envVarExists: !!process.env.REACT_APP_GOOGLE_CLIENT_ID
+});
+
 if (!isValidClientId) {
   console.warn('Invalid Google Client ID detected - GoogleLogin functionality may not work correctly!');
   console.warn('Please check your .env.local file and make sure REACT_APP_GOOGLE_CLIENT_ID is set correctly.');
@@ -27,7 +33,12 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <GoogleOAuthProvider clientId={isValidClientId ? GOOGLE_CLIENT_ID : "invalid-client-id-placeholder"}>
+    <GoogleOAuthProvider 
+      clientId={isValidClientId ? GOOGLE_CLIENT_ID : "invalid-client-id-placeholder"}
+      onScriptLoadError={() => {
+        console.error('Google OAuth script failed to load');
+      }}
+    >
       <BrowserRouter>
         <AuthProvider>
           <App />

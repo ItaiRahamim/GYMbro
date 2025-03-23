@@ -46,7 +46,12 @@ const ChatConversation: React.FC = () => {
         const response = await chatService.getChatMessages(chatId);
         console.log(`[Chat] Received ${response.messages.length} messages from server`);
         
-        setMessages(response.messages.reverse());
+        // Sort messages by createdAt in ascending order (oldest first)
+        const sortedMessages = response.messages
+          .reverse() // API returns them in descending order, so we reverse to get ascending
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        
+        setMessages(sortedMessages);
         setHasMore(response.pagination.page < response.pagination.totalPages);
         setPage(1);
         
@@ -86,7 +91,10 @@ const ChatConversation: React.FC = () => {
       
       // Only add message if it belongs to current chat
       if (newMessage.chat === chatId) {
-        setMessages(prev => [...prev, newMessage]);
+        // Add message in chronological order
+        setMessages(prev => [...prev, newMessage].sort(
+          (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        ));
         
         // Mark as read if we're in the chat
         socket.emit('message:read', { 
@@ -164,8 +172,15 @@ const ChatConversation: React.FC = () => {
       const scrollContainer = messagesContainerRef.current;
       const oldScrollHeight = scrollContainer?.scrollHeight || 0;
       
-      // Add messages in reverse order at the beginning of the array
-      setMessages(prev => [...response.messages.reverse(), ...prev]);
+      // Add messages in chronological order
+      const oldMessages = response.messages
+        .reverse() // API returns them in descending order, so we reverse to get ascending
+        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      setMessages(prev => [...oldMessages, ...prev].sort(
+        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      ));
+      
       setHasMore(nextPage < response.pagination.totalPages);
       setPage(nextPage);
       
@@ -257,8 +272,10 @@ const ChatConversation: React.FC = () => {
       updatedAt: new Date().toISOString()
     };
     
-    // Add the message to the UI immediately
-    setMessages(prev => [...prev, tempMessage]);
+    // Add the message to the UI immediately in chronological order
+    setMessages(prev => [...prev, tempMessage].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    ));
 
     const messageContent = messageText;
     // Clear the input field immediately for better UX
@@ -379,7 +396,8 @@ const ChatConversation: React.FC = () => {
           p: 2,
           display: 'flex',
           flexDirection: 'column',
-          gap: 1
+          gap: 1,
+          bgcolor: '#f5f7fb' // Light background for chat area
         }}
         onScroll={handleScroll}
       >
@@ -404,25 +422,42 @@ const ChatConversation: React.FC = () => {
               key={message._id} 
               sx={{ 
                 alignSelf: isMyMessage ? 'flex-end' : 'flex-start',
-                maxWidth: '70%'
+                maxWidth: '70%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: isMyMessage ? 'flex-end' : 'flex-start'
               }}
             >
               <Paper 
                 sx={{ 
                   p: 2, 
-                  bgcolor: isMyMessage ? 'primary.light' : 'grey.100',
+                  bgcolor: isMyMessage 
+                    ? 'primary.main' // Darker blue for current user
+                    : '#e0e0e0', // Light gray for other user
                   color: isMyMessage ? 'white' : 'text.primary',
-                  borderRadius: 2
+                  borderRadius: isMyMessage 
+                    ? '18px 18px 4px 18px' // Rounded with pointed corner at bottom right
+                    : '18px 18px 18px 4px', // Rounded with pointed corner at bottom left
+                  boxShadow: 1,
+                  position: 'relative'
                 }}
               >
-                <Typography variant="body1">{message.content}</Typography>
+                <Typography 
+                  variant="body1" 
+                  sx={{
+                    wordBreak: 'break-word'
+                  }}
+                >
+                  {message.content}
+                </Typography>
                 <Typography 
                   variant="caption" 
                   sx={{ 
                     display: 'block', 
                     textAlign: 'right',
                     mt: 0.5,
-                    opacity: 0.8
+                    opacity: 0.8,
+                    color: isMyMessage ? 'rgba(255, 255, 255, 0.8)' : 'text.secondary'
                   }}
                 >
                   {formatRelativeTime(message.createdAt)}
@@ -433,13 +468,40 @@ const ChatConversation: React.FC = () => {
                   )}
                 </Typography>
               </Paper>
+              
+              {/* Show sender avatar for other user's messages */}
+              {!isMyMessage && (
+                <Typography 
+                  variant="caption" 
+                  sx={{ 
+                    mt: 0.5, 
+                    ml: 1, 
+                    color: 'text.secondary',
+                    fontSize: '0.7rem'
+                  }}
+                >
+                  {message.sender.username}
+                </Typography>
+              )}
             </Box>
           );
         })}
         
         {isTyping && (
           <Box sx={{ alignSelf: 'flex-start', mt: 1 }}>
-            <Paper sx={{ p: 1, borderRadius: 2, bgcolor: 'grey.100' }}>
+            <Paper sx={{ 
+              p: 1, 
+              borderRadius: '12px', 
+              bgcolor: '#e0e0e0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1
+            }}>
+              <div className="typing-indicator">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
               <Typography variant="body2">מקליד/ה...</Typography>
             </Paper>
           </Box>
@@ -451,7 +513,7 @@ const ChatConversation: React.FC = () => {
       <Divider />
       
       {/* Message Input */}
-      <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
+      <Box sx={{ p: 2, display: 'flex', alignItems: 'center', bgcolor: '#f7f7f7' }}>
         <TextField
           fullWidth
           variant="outlined"
@@ -461,7 +523,13 @@ const ChatConversation: React.FC = () => {
           onKeyDown={handleKeyDown}
           multiline
           maxRows={4}
-          sx={{ mr: 1 }}
+          sx={{ 
+            mr: 1,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: '24px',
+              bgcolor: 'white'
+            }
+          }}
           disabled={sendingMessage}
         />
         <IconButton 
@@ -472,12 +540,57 @@ const ChatConversation: React.FC = () => {
           sx={{ 
             cursor: messageText.trim() && !sendingMessage ? 'pointer' : 'default', 
             transition: 'transform 0.2s',
-            '&:hover': { transform: messageText.trim() && !sendingMessage ? 'scale(1.1)' : 'none' }
+            bgcolor: 'primary.main',
+            color: 'white',
+            '&:hover': { 
+              bgcolor: 'primary.dark',
+              transform: messageText.trim() && !sendingMessage ? 'scale(1.1)' : 'none' 
+            },
+            '&.Mui-disabled': {
+              bgcolor: 'grey.300',
+              color: 'grey.500'
+            }
           }}
         >
-          {sendingMessage ? <CircularProgress size={24} /> : <SendIcon />}
+          {sendingMessage ? <CircularProgress size={24} color="inherit" /> : <SendIcon />}
         </IconButton>
       </Box>
+      
+      {/* CSS for typing animation */}
+      <style>{`
+        .typing-indicator {
+          display: flex;
+          align-items: center;
+        }
+        
+        .typing-indicator span {
+          height: 8px;
+          width: 8px;
+          margin: 0 1px;
+          background-color: #9E9E9E;
+          border-radius: 50%;
+          display: inline-block;
+          animation: typing-animation 1.4s infinite ease-in-out both;
+        }
+        
+        .typing-indicator span:nth-child(1) {
+          animation-delay: 0s;
+        }
+        
+        .typing-indicator span:nth-child(2) {
+          animation-delay: 0.2s;
+        }
+        
+        .typing-indicator span:nth-child(3) {
+          animation-delay: 0.4s;
+        }
+        
+        @keyframes typing-animation {
+          0% { transform: scale(0); }
+          50% { transform: scale(1); }
+          100% { transform: scale(0); }
+        }
+      `}</style>
     </Box>
   );
 };

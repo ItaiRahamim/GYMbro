@@ -6,14 +6,25 @@ import { Document } from 'mongoose';
 // Configure Google OAuth Strategy only if credentials are available
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+// מגדיר כתובת קבועה במקום משתנה דינמי
+const SERVER_URL = process.env.NODE_ENV === 'production' 
+  ? `https://localhost:${process.env.HTTPS_PORT || '5443'}`
+  : `http://localhost:${process.env.PORT || '5000'}`;
 
 if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET) {
+  // לוג מפורט של ההגדרות הנוכחיות
+  console.log(`Configuring Google OAuth with:
+  - Client ID: ${GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 10) + '...' : 'missing'}
+  - Callback URL: ${SERVER_URL}/api/auth/google/callback`);
+  
   passport.use(
     new GoogleStrategy(
       {
         clientID: GOOGLE_CLIENT_ID,
         clientSecret: GOOGLE_CLIENT_SECRET,
-        callbackURL: '/api/auth/google/callback',
+        callbackURL: `${SERVER_URL}/api/auth/google/callback`,
+        // הוספת פרמטרים נוספים שיכולים לעזור עם הבעיה
+        scope: ['profile', 'email']
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
